@@ -162,7 +162,7 @@ def Discriminator():
 	model = keras.layers.LeakyReLU()(model)
 
 	model = keras.layers.Conv2D(1, 2, strides=1, activation='sigmoid', padding="valid")(model)
-	Model= keras.models.Model(inputs, outputs)
+	Model= keras.models.Model(input, model)
 	return Model
 	
 class DisplayCallback(tf.keras.callbacks.Callback):
@@ -364,8 +364,8 @@ def TrainGAN():
 
 
 # Generators and Discriminators 
-generator_1 = unet()
-generator_2 = unet()
+generator_1 = UNet()
+generator_2 = UNet()
 discriminator_x = Discriminator()
 discriminator_y = Discriminator()
 
@@ -486,20 +486,20 @@ def Train(epochs):
 		
 		n = 0
 		for image_x, image_y in tf.data.Dataset.zip((mr_train_dataset, ct_train_dataset)):
-      train_step(image_x, image_y)
+			train_step(image_x, image_y)
       
-      if n % 10 == 0:
-        print ('.', end='')
-      n+=1
+			if n % 10 == 0:
+				print ('.', end='')
+			n+=1
 
-    display.clear_output(wait=True)
+		display.clear_output(wait=True)
 
-    for test_image_x in mr_test_dataset.take(5):
-      generate_images(generator_g, test_image_x)
+		for test_image_x in mr_test_dataset.take(5):
+			generate_images(generator_g, test_image_x)
 
-    print('Time taken for epoch {} was {} sec\n'.format(epoch + 1, time.time() - start))
+		print('Time taken for epoch {} was {} sec\n'.format(epoch + 1, time.time() - start))
 
-  checkpoint.save(file_prefix=checkpoint_prefix)
+	checkpoint.save(file_prefix=checkpoint_prefix)
 		
 def main():
 	#TrainUnet()
