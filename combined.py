@@ -56,7 +56,7 @@ class GetData():
 			#label = label[96:224,96:224]
 			#cv2.imwrite("Pre_"+str(i)+".jpg",label)
 			#image = image[...,0][...,None]/255
-			label = label/255
+			label = label>20
 			image = image/255
 			image = image[...,None]
 			label = label[...,None]
