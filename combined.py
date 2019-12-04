@@ -25,8 +25,9 @@ from utils import Logger
 from utils import weights_init_normal
 from os.path import isfile,join
 from os import listdir
+from keras import backend as K
 
-from tensorflow_examples.models.pix2pix import pix2pix
+
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 # Updated to work  with tensorflow 2.0
 class GetData():
@@ -46,17 +47,22 @@ class GetData():
 
 		for i in range (len(onlyImagefiles)):
 			image = cv2.imread(os.path.join(image_dir,onlyImagefiles[i]),cv2.IMREAD_GRAYSCALE)
-			im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]))
-			label = np.array(im)
-
+			#im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
+			#label = np.array(im)
+			label = cv2.imread(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
 			image= cv2.resize(image, (self.image_size, self.image_size))
 			label= cv2.resize(label, (self.image_size, self.image_size))
+			#image = image[96:224,96:224]
+			#label = label[96:224,96:224]
+			#cv2.imwrite("Pre_"+str(i)+".jpg",label)
 			#image = image[...,0][...,None]/255
-			label = label>1
+			label = label>20
 			image = image/255
 			image = image[...,None]
 			label = label[...,None]
 			label = label.astype(np.int32)
+			#label = label*255
+			#cv2.imwrite("Post_"+str(i)+".jpg",label)
 			images_list.append(image)
 			labels_list.append(label)
 			examples = examples +1
@@ -86,6 +92,8 @@ base_dir= 'Data'
 # Training and Test Directories 
 train_dir = os.path.join(base_dir,'Train')
 test_dir = os.path.join(base_dir,'Test')
+real_dir = os.path.join(base_dir,'Real')
+
 BATCH_SIZE = 1
 BUFFER_SIZE = 1000
 image_size = 128
@@ -93,8 +101,18 @@ EPOCHS = 20
 def PreProcessImages():
 	train_data = GetData(train_dir)
 	test_data = GetData(test_dir)
-	return train_data,  test_data
+	real_data = GetData(real_dir)
 
+	return train_data,  test_data, real_data
+
+def f1_metric(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    recall = true_positives / (possible_positives + K.epsilon())
+    f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
+    return f1_val
 
 	
 def ImportImages(train_data,  test_data):
@@ -145,9 +163,7 @@ def UNet():
 	outputs = keras.layers.Conv2D(1, (1, 1), padding="same", activation="sigmoid")(u4)
 	model = keras.models.Model(inputs, outputs)
 	return model
-
-
-
+	
 	
 #https://github.com/vincent1bt/MedCycleGAN/blob/master/MedCycleGAN.ipynb	
 def Discriminator():
@@ -164,7 +180,6 @@ def Discriminator():
 	model = keras.layers.Conv2D(1, 2, strides=1, activation='sigmoid', padding="valid")(model)
 	Model= keras.models.Model(input, model)
 	return Model
-	
 class DisplayCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		clear_output(wait=True)
@@ -176,26 +191,48 @@ def TrainUnet():
 	epochs = 10
 	batch_size = 1
 	model = UNet()
-	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["acc"])
+	adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
+	model.compile(optimizer=adam, loss="binary_crossentropy", metrics=["acc",f1_metric])
 	model.summary()
 	
-	train_data,  test_data= PreProcessImages()
+	train_data,  test_data, real_data= PreProcessImages()
 	#train_dataset, test_dataset= ImportImages(train_data,  test_data)
 	#print (train_data.images[0].shape)
 	#train_steps = len(train_data.labels)//batch_size
 	#valid_steps = len(test_data.labels)//batch_size
 	#print (train_steps)
 	#model.fit_generator(train_dataset, validation_data=test_dataset, steps_per_epoch=train_steps, validation_steps=valid_steps, epochs=epochs)
-	model_history = model.fit(test_data.images,test_data.labels, epochs=10)
-	loss = model_history.history['loss']
-
-	score = model.evaluate(train_data.images,train_data.labels)
-	print(score[0])
-	print(score[1])
+	if not os.path.exists("project.h5"):
+		model_history = model.fit(train_data.images,train_data.labels, epochs=epochs)
+		loss = model_history.history['loss']
+		model.save_weights("project.h5")
+	else:
+		model.load_weights("project.h5")
+	
+	loss, accuracy, f1_score = model.evaluate(test_data.images,test_data.labels)
+	print(loss)
+	print(accuracy)
+	print(f1_score)
+	print("###################################")
+	loss, accuracy, f1_score = model.evaluate(real_data.images,real_data.labels)
+	print(loss)
+	print(accuracy)
+	print(f1_score)
+	result = model.predict(real_data.images)
+	print(result.shape)
+	for i in range (result.shape[0]):
+		img = result[i,:,:,:]
+		img = img.reshape(128,128)
+		img = img>0.5
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("result_"+str(i)+".jpg",img)
 '''
 	epochs = range(epochs)
 
 	plt.figure()
+	result = model.	result = model.predict(test_data.images)
+(test_data.images)
 	plt.plot(epochs, loss, 'r', label='Training loss')
 	plt.plot(epochs, val_loss, 'bo', label='Validation loss')
 	plt.title('Training and Validation Loss')
@@ -360,6 +397,7 @@ def TrainGAN():
 	torch.save(netD_A.state_dict(), 'output/netD_A.pth')
 	torch.save(netD_B.state_dict(), 'output/netD_B.pth')
 
+#<<<<<<< HEAD
 	
 
 
@@ -502,10 +540,10 @@ def Train(epochs):
 
 	checkpoint.save(file_prefix=checkpoint_prefix)
 		
+#=======
+#>>>>>>> 059dc7b86aa2972f1dbfd38652b47cdb1ce09405
 def main():
-	#TrainUnet()
-	Train(5)
-
+	TrainUnet()
 
 if __name__ == '__main__':
 	main()
