@@ -3,8 +3,8 @@ import time
 import datetime
 import sys
 
-from torch.autograd import Variable
-import torch
+#from torch.autograd import Variable
+#import torch
 from visdom import Visdom
 import numpy as np
 

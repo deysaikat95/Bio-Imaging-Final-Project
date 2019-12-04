@@ -485,7 +485,7 @@ def Train(epochs):
 		start= time.time()
 		
 		n = 0
-		for image_x, image_y in tf.data.Dataset.zip((mr_train_dataset, ct_train_dataset)):
+		for image_x, image_y in PreProcessImages():
 			train_step(image_x, image_y)
       
 			if n % 10 == 0:
