@@ -403,7 +403,7 @@ def Identity_Loss(real_image, same_image):
 
 
 # Optimizers
-
+# Generators for the U-Net Cycle GAN are the Unets
 generator_1_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 generator_2_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 
@@ -480,6 +480,7 @@ def train_step(real_image_x, real_image_y):
   
   discriminator_y_optimizer.apply_gradients(zip(discriminator_y_gradients, discriminator_y.trainable_variables))
 
+# Training of the U-Net Cycle GAN
 def Train(epochs):
 	for epoch in range(epochs):
 		start= time.time()
