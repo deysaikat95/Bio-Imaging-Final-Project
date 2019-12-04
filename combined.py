@@ -5,11 +5,11 @@ import numpy as np
 
 import skimage.io
 import cv2
-#import torchvision.transforms as transforms
-#from torch.utils.data import DataLoader
-#from torch.autograd import Variable
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+from torch.autograd import Variable
 from PIL import Image
-#import torch
+import torch
 
 import tensorflow as tf
 from tensorflow import keras
@@ -17,16 +17,17 @@ from IPython.display import clear_output
 import matplotlib.pyplot as plt
 
 
-#from models import Generator
-#from models import Discriminator
-#from utils import ReplayBuffer
+from models import Generator
+from models import Discriminator
+from utils import ReplayBuffer
 from utils import LambdaLR
 from utils import Logger
 from utils import weights_init_normal
 from os.path import isfile,join
 from os import listdir
+from keras import backend as K
 
-from tensorflow_examples.models.pix2pix import pix2pix
+
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 # Updated to work  with tensorflow 2.0
 class GetData():
@@ -46,17 +47,22 @@ class GetData():
 
 		for i in range (len(onlyImagefiles)):
 			image = cv2.imread(os.path.join(image_dir,onlyImagefiles[i]),cv2.IMREAD_GRAYSCALE)
-			im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]))
-			label = np.array(im)
-
+			#im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
+			#label = np.array(im)
+			label = cv2.imread(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
 			image= cv2.resize(image, (self.image_size, self.image_size))
 			label= cv2.resize(label, (self.image_size, self.image_size))
+			#image = image[96:224,96:224]
+			#label = label[96:224,96:224]
+			#cv2.imwrite("Pre_"+str(i)+".jpg",label)
 			#image = image[...,0][...,None]/255
-			label = label>1
+			label = label/255
 			image = image/255
 			image = image[...,None]
 			label = label[...,None]
 			label = label.astype(np.int32)
+			#label = label*255
+			#cv2.imwrite("Post_"+str(i)+".jpg",label)
 			images_list.append(image)
 			labels_list.append(label)
 			examples = examples +1
@@ -86,6 +92,8 @@ base_dir= 'Data'
 # Training and Test Directories 
 train_dir = os.path.join(base_dir,'Train')
 test_dir = os.path.join(base_dir,'Test')
+real_dir = os.path.join(base_dir,'Real')
+
 BATCH_SIZE = 1
 BUFFER_SIZE = 1000
 image_size = 128
@@ -93,8 +101,18 @@ EPOCHS = 20
 def PreProcessImages():
 	train_data = GetData(train_dir)
 	test_data = GetData(test_dir)
-	return train_data,  test_data
+	real_data = GetData(real_dir)
 
+	return train_data,  test_data, real_data
+
+def f1_metric(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    recall = true_positives / (possible_positives + K.epsilon())
+    f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
+    return f1_val
 
 	
 def ImportImages(train_data,  test_data):
@@ -145,26 +163,8 @@ def UNet():
 	outputs = keras.layers.Conv2D(1, (1, 1), padding="same", activation="sigmoid")(u4)
 	model = keras.models.Model(inputs, outputs)
 	return model
-
-
-
 	
-#https://github.com/vincent1bt/MedCycleGAN/blob/master/MedCycleGAN.ipynb	
-def Discriminator():
-	input = keras.layers.Input((image_size, image_size, 1), name='image')
-        
-	model = keras.layers.Conv2D(64, 3, strides=2, padding="same")(input)
-	model = keras.layers.BatchNormalization()(model)
-	model = keras.layers.LeakyReLU()(model)
-  
-	model = keras.layers.Conv2D(128, 3, strides=2, padding="same")(model)
-	model = keras.layers.BatchNormalization()(model)
-	model = keras.layers.LeakyReLU()(model)
 
-	model = keras.layers.Conv2D(1, 2, strides=1, activation='sigmoid', padding="valid")(model)
-	Model= keras.models.Model(input, model)
-	return Model
-	
 class DisplayCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		clear_output(wait=True)
@@ -176,26 +176,48 @@ def TrainUnet():
 	epochs = 10
 	batch_size = 1
 	model = UNet()
-	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["acc"])
+	adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
+	model.compile(optimizer=adam, loss="binary_crossentropy", metrics=["acc",f1_metric])
 	model.summary()
 	
-	train_data,  test_data= PreProcessImages()
+	train_data,  test_data, real_data= PreProcessImages()
 	#train_dataset, test_dataset= ImportImages(train_data,  test_data)
 	#print (train_data.images[0].shape)
 	#train_steps = len(train_data.labels)//batch_size
 	#valid_steps = len(test_data.labels)//batch_size
 	#print (train_steps)
 	#model.fit_generator(train_dataset, validation_data=test_dataset, steps_per_epoch=train_steps, validation_steps=valid_steps, epochs=epochs)
-	model_history = model.fit(test_data.images,test_data.labels, epochs=10)
-	loss = model_history.history['loss']
-
-	score = model.evaluate(train_data.images,train_data.labels)
-	print(score[0])
-	print(score[1])
+	if not os.path.exists("project.h5"):
+		model_history = model.fit(train_data.images,train_data.labels, epochs=epochs)
+		loss = model_history.history['loss']
+		model.save_weights("project.h5")
+	else:
+		model.load_weights("project.h5")
+	
+	loss, accuracy, f1_score = model.evaluate(test_data.images,test_data.labels)
+	print(loss)
+	print(accuracy)
+	print(f1_score)
+	print("###################################")
+	loss, accuracy, f1_score = model.evaluate(real_data.images,real_data.labels)
+	print(loss)
+	print(accuracy)
+	print(f1_score)
+	result = model.predict(real_data.images)
+	print(result.shape)
+	for i in range (result.shape[0]):
+		img = result[i,:,:,:]
+		img = img.reshape(128,128)
+		img = img>0.5
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("result_"+str(i)+".jpg",img)
 '''
 	epochs = range(epochs)
 
 	plt.figure()
+	result = model.	result = model.predict(test_data.images)
+(test_data.images)
 	plt.plot(epochs, loss, 'r', label='Training loss')
 	plt.plot(epochs, val_loss, 'bo', label='Validation loss')
 	plt.title('Training and Validation Loss')
@@ -360,151 +382,8 @@ def TrainGAN():
 	torch.save(netD_A.state_dict(), 'output/netD_A.pth')
 	torch.save(netD_B.state_dict(), 'output/netD_B.pth')
 
-	
-
-
-# Generators and Discriminators 
-generator_1 = UNet()
-generator_2 = UNet()
-discriminator_x = Discriminator()
-discriminator_y = Discriminator()
-
-# Loss Calculations 
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-
-
-# Discriminator Loss 
-def Discriminator_Loss(real, gen):
-	real_loss = cross_entropy(tf.ones_like(real), real)
-	generated_loss = cross_entropy(tf.zeros_like(gen), gen)
-	
-	loss = (real_loss + generated_loss)* 0.5
-	
-	return loss
-
-# Generator Loss
-def Generator_Loss(gen):
-	gen_loss = cross_entropy(tf.ones_like(gen), gen)
-	
-	return gen_loss
-	
-# Cycle GAN Loss 
-Lambda = 10
-def Cycle_Loss(real_image, cycle_image):
-	loss_L1= tf.reduce_mean(tf.abs(real_image-cycle_image))
-	Loss = Lambda * loss_L1
-	return Loss
-	
-# Identity Loss 
-def Identity_Loss(real_image, same_image):
-	loss = tf.reduce_mean(tf.abs(real_image-same_image))
-	Loss = 0.5 * Lambda * loss
-	return Loss
-
-
-# Optimizers
-
-generator_1_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-generator_2_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-
-discriminator_x_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-discriminator_y_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-
-# Training 
-# Generating an image
-def generate_images(model, test_input):
-  prediction = model(test_input)
-    
-  plt.figure(figsize=(12, 12))
-
-  display_list = [test_input[0], prediction[0]]
-  title = ['Real Image', 'Generated Image']
-
-  for i in range(2):
-    plt.subplot(1, 2, i + 1)
-    plt.title(title[i])
-    plt.imshow(np.squeeze(display_list[i]) * 0.5 + 0.5, cmap='gray')
-    plt.axis('off')
-  plt.show()
-
-#Steps of Training
-@tf.function
-def train_step(real_image_x, real_image_y):
-  with tf.GradientTape(persistent=True) as tape: 
-    #generator_g transforms from X to Y
-    #generator_f transforms from Y to X
-
-    #From X, generate Y
-    generated_image_y = generator_g(real_image_x, training=True)
-    #From generated Y, back to X
-    cycled_image_x = generator_f(generated_image_y, training=True)
-
-    #From Y, generate X
-    generated_image_x = generator_f(real_image_y, training=True)
-    #From generated X, back to Y
-    cycled_image_y = generator_g(generated_image_x, training=True)
-
-    same_image_x = generator_f(real_image_x, training=True)
-    same_image_y = generator_g(real_image_y, training=True)
-
-    #Should output 1's since are real images
-    patch_real_x = discriminator_x(real_image_x, training=True)
-    patch_real_y = discriminator_y(real_image_y, training=True)
-
-    #Should output 0's since are generated images
-    patch_generated_x = discriminator_x(generated_image_x, training=True)
-    patch_generated_y = discriminator_y(generated_image_y, training=True)
-
-    generator_g_loss = generator_loss(patch_generated_y)
-    generator_f_loss = generator_loss(patch_generated_x)
-    
-    total_cycle_loss = cycle_loss(real_image_x, cycled_image_x) + cycle_loss(real_image_y, cycled_image_y)
-    
-    total_generator_g_loss = generator_g_loss + total_cycle_loss + identity_loss(real_image_y, same_image_y)
-    total_generator_f_loss = generator_f_loss + total_cycle_loss + identity_loss(real_image_x, same_image_x)
-
-    discriminator_x_loss = discriminator_loss(patch_real_x, patch_generated_x)
-    discriminator_y_loss = discriminator_loss(patch_real_y, patch_generated_y)
-  
-  generator_g_gradients = tape.gradient(total_generator_g_loss, generator_g.trainable_variables)
-  generator_f_gradients = tape.gradient(total_generator_f_loss, generator_f.trainable_variables)
-  
-  discriminator_x_gradients = tape.gradient(discriminator_x_loss, discriminator_x.trainable_variables)
-  discriminator_y_gradients = tape.gradient(discriminator_y_loss, discriminator_y.trainable_variables)
-  
-  generator_g_optimizer.apply_gradients(zip(generator_g_gradients, generator_g.trainable_variables))
-
-  generator_f_optimizer.apply_gradients(zip(generator_f_gradients, generator_f.trainable_variables))
-  
-  discriminator_x_optimizer.apply_gradients(zip(discriminator_x_gradients, discriminator_x.trainable_variables))
-  
-  discriminator_y_optimizer.apply_gradients(zip(discriminator_y_gradients, discriminator_y.trainable_variables))
-
-def Train(epochs):
-	for epoch in range(epochs):
-		start= time.time()
-		
-		n = 0
-		for image_x, image_y in PreProcessImages():
-			train_step(image_x, image_y)
-      
-			if n % 10 == 0:
-				print ('.', end='')
-			n+=1
-
-		display.clear_output(wait=True)
-
-		for test_image_x in mr_test_dataset.take(5):
-			generate_images(generator_g, test_image_x)
-
-		print('Time taken for epoch {} was {} sec\n'.format(epoch + 1, time.time() - start))
-
-	checkpoint.save(file_prefix=checkpoint_prefix)
-		
 def main():
-	#TrainUnet()
-	Train(5)
-
+	TrainUnet()
 
 if __name__ == '__main__':
 	main()
