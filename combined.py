@@ -209,6 +209,8 @@ def TrainUnet():
 		model_history = model.fit(train_data.images,train_data.labels,validation_split=0.3, epochs=epochs)
 		loss = model_history.history['loss']
 		val_loss = model_history.history['val_loss']
+		dice_Val= model_history.history['dice_coef']
+		F1_Val= model_history.history['f1_metric']
 	else:
 		model.load_weights("UNetW.h5")
 	
@@ -273,12 +275,23 @@ def TrainUnet():
 
 	epochs = range(epochs)
 	if not os.path.exists("UNetW.h5"):
-		plt.figure()
+		
+		fig1= plt.figure()
 		plt.plot(epochs, loss, 'r', label='Training loss')
 		plt.plot(epochs, val_loss, 'bo', label='Validation loss')
 		plt.title('Training and Validation Loss')
 		plt.xlabel('Epoch')
 		plt.ylabel('Loss Value')
+		plt.ylim([0, 1])
+		plt.legend()
+		plt.show()
+		
+		fig2= plt.figure()
+		plt.plot(epochs, dice_Val, 'r', label='Dice Coefficient ')
+		plt.plot(epochs, F1_Val, 'b', label='f1 Metric')
+		plt.title('Dice Coefficient and F1 Metrics')
+		plt.xlabel('Epoch')
+		plt.ylabel('Metrics Value')
 		plt.ylim([0, 1])
 		plt.legend()
 		plt.show()
