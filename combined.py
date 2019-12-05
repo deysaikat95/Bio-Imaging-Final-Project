@@ -237,17 +237,17 @@ def TrainUnet():
 
 	print("Cross Domain Loss: "+str(score[0]))
 
-	print("Cross Domain Accuracy: "+str(score[1]))
+	print("Cross Domain F1 score: "+str(score[1]))
 
-	print("Cross Domain F1 score: "+str(score[2]))
+	print("Cross Domain Dice Coef: "+str(score[2]))
 
 	score = model.evaluate(real_data.images,real_data.labels)
 
 	print("Real Domain Loss: "+str(score[0]))
 
-	print("Real Domain Accuracy: "+str(score[1]))
+	print("Cross Domain F1 score: "+str(score[1]))
 
-	print("Real Domain F1 score: "+str(score[2]))
+	print("Cross Domain Dice Coef: "+str(score[2]))
 
 	for i in range (resultSame.shape[0]):
 		img = resultSame[i]
@@ -281,7 +281,7 @@ def TrainUnet():
 		img = img.astype(np.uint8)
 		cv2.imwrite("CrossImage_"+str(i)+".jpg",img)
 
-	return model
+	
 
 	epochs = range(epochs)
 
@@ -294,6 +294,8 @@ def TrainUnet():
 	plt.ylim([0, 1])
 	plt.legend()
 	plt.show()
+
+	return model
 	
 	
 
