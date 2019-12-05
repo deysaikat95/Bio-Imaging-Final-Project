@@ -6,7 +6,6 @@ import numpy as np
 import skimage.io
 import cv2
 from PIL import Image
-import torch
 
 import tensorflow as tf
 from tensorflow import keras
