@@ -210,7 +210,6 @@ def TrainUnet():
 		model_history = model.fit(train_data.images,train_data.labels,validation_split=0.3, epochs=epochs)
 		loss = model_history.history['loss']
 		val_loss = model_history.history['val_loss']
-		model.save_weights("UNetW.h5")
 	else:
 		model.load_weights("UNetW.h5")
 	
@@ -285,6 +284,7 @@ def TrainUnet():
 		plt.legend()
 		plt.show()
 
+	model.save_weights("UNetW.h5")
 	return model
 		
 def main():
