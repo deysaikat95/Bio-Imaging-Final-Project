@@ -89,10 +89,12 @@
         <p>
 			The experiments involved, <a href="http://medicaldecathlon.com/?fbclid=IwAR0gog0WcOQ8HrUnCWzt8fO52CaX_Dp9DsQg1MQQpSxr0GDU7-KoYSM3mUc#tasks">Prostate central gland and peripheral zone images dataset</a>.
 			Since the dataset is multimodal, the two different MR modalities namely T2 and ADC were used as training/source and testing/target domains respectively.
-			Our dataset can be summarized as follows:<br>
-			Size: 48 4D volumes (32 Training + 16 Testing)<br>
-			Source: Radboud University, Nijmegen Medical Centre<br>
-			Challenge: Segmenting two adjoint regions with large inter-subject variations<br>
+			Our dataset can be summarized as follows:
+			<ul class="list-unstyled">
+			<li>Size: 48 4D volumes (32 Training + 16 Testing)</li>
+			<li>Source: Radboud University, Nijmegen Medical Centre</li>
+			<li>Challenge: Segmenting two adjoint regions with large inter-subject variations<li>
+			</ul>
 			<p><font size="4" color = "black" >NOTE:</font></p> The datset used in the original paper(i.e the paper we are replicating<sup>1</sup>), <a href="https://www.cardiacatlas.org/studies/scmr-consensus-data/?fbclid=IwAR1anj_6njiVcg1ijPxN13nhG9jtVDJJgbOCdX3SXhCuY4sWcqPTATKnz-w">
 				SCMR Consensus Contour Data</a> was different and had medical data privacy issues. Due to lack of authorization necessary to handle such kind of data we decided to go with this one.
 		</p>
@@ -111,13 +113,44 @@
 
 			<p><font size="4" color = "blue">2.2.3 Experiments</font></p>
 			<p>
-			We performed comparative experiments to evaluate the performance in three scenarios:<br>
-			1) Segment data of the target domain directly by Unet trained on the source
-			domain <br>
-			2) Segment data of the source domain by Unet trained on the source domain<br>
-			3) <br>				
+			We performed comparative experiments to evaluate the performance in three scenarios:
+			<ul class="list-unstyled">
+				<li>1) Segment data of the target domain directly by Unet trained on the source domain </li>
+				<li> 2) Segment data of the source domain by Unet trained on the source domain</li>
+			3) 
+			<ul class="list-unstyled">				
 			</p>
 			<p><font size="5">2.3 Tools</font></p>
+			<div class="row">
+			<div class="col">
+			<div class="card text-white bg-info "> 
+			<div class="card-header">
+			<p class="card-title">Software Tools & Libraries</p>
+			</div>
+			<ul class="list-unstyled">
+				<li>Python</li>
+				<li>Tensorflow</li>
+				<li></li>
+			</ul>
+			</div>
+			</div>
+			<div class="col">
+			<div class="card text-white bg-info "> 
+			<div class="card-header">
+			 <p class="card-title">Hardware</p>
+			</div>
+			<ul class="list-unstyled">
+				<li>Nvidia GTX 1050</li>
+				<li></li>
+				<li></li>
+				<li></li>
+				<li></li>
+				<li></li>
+				<li></li>
+			</ul>
+			</div>
+			</div>
+			</div>
 			<p><font size="4" color = "blue" >Software Tools & Libraries</font></p>
 			<p><font size="4" color = "blue" >Hardware</font></p>
 	</p>
