@@ -16,6 +16,7 @@ from tensorflow.keras import layers
 
 import IPython
 from IPython import display # use to display
+
 # Cross-entropy
 cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -34,7 +35,8 @@ seed = tf.random.normal([num_examples_to_generate, noise_dim])
 
 
 
-#https://hardikbansal.github.io/CycleGANBlog/
+#https://hardikbansal.github.io/CycleGANBlog/ for understanding architecture 
+#https://github.com/zurutech/gans-from-theory-to-production/tree/master/2.%20GANs%20in%20Tensorflow
 # Helper Functions 
 # Convolution layer 
 def ImportDataSet():
@@ -50,7 +52,7 @@ def ImportDataSet():
 	return train_dataset
 #def ConvLayer():
 
-# GIF maker to save images as gis
+# GIF maker to save images as gif 
 def generate_and_save(model,epoch, test_input):
 	predictions= model(test_input, training=False)
 	
