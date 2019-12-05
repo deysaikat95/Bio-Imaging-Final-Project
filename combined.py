@@ -191,7 +191,7 @@ def dice_coef(y_true, y_pred, smooth=1):
 
 def TrainUnet():
 #############################Start Unet training###############################
-	epochs = 10
+	epochs = 20
 	batch_size = 1
 	model = UNet()
 	#adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
