@@ -235,9 +235,9 @@ def TrainUnet():
 
 	print("Real Domain Loss: "+str(score[0]))
 
-	print("Cross Domain F1 score: "+str(score[1]))
+	print("Real Domain F1 score: "+str(score[1]))
 
-	print("Cross Domain Dice Coef: "+str(score[2]))
+	print("Real Domain Dice Coef: "+str(score[2]))
 
 	for i in range (resultSame.shape[0]):
 		img = resultSame[i]
