@@ -46,19 +46,19 @@ class GetData():
 		onlyLabelfiles.sort()
 
 		for i in range (len(onlyImagefiles)):
-			image = cv2.imread(os.path.join(image_dir,onlyImagefiles[i]),cv2.IMREAD_GRAYSCALE)
+			image = cv2.imread(os.path.join(image_dir,onlyImagefiles[i]))
 			#im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
 			#label = np.array(im)
 			label = cv2.imread(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
-			image= cv2.resize(image, (self.image_size, self.image_size))
-			label= cv2.resize(label, (self.image_size, self.image_size))
-			#image = image[96:224,96:224]
-			#label = label[96:224,96:224]
+			#image= cv2.resize(image, (self.image_size, self.image_size))
+			#label= cv2.resize(label, (self.image_size, self.image_size))
+			image = image[96:224,96:224,:]
+			label = label[96:224,96:224]
 			#cv2.imwrite("Pre_"+str(i)+".jpg",label)
 			#image = image[...,0][...,None]/255
-			label = label>20
+			label = label>40
 			image = image/255
-			image = image[...,None]
+			#image = image[...,None]
 			label = label[...,None]
 			label = label.astype(np.int32)
 			#label = label*255
@@ -106,6 +106,11 @@ def PreProcessImages():
 	return train_data,  test_data, real_data
 
 def f1_metric(y_true, y_pred):
+    y_true = y_true >0.4
+    y_pred = y_pred>0.4
+    y_true = tf.dtypes.cast(y_true,tf.float32)
+    y_pred = tf.dtypes.cast(y_pred,tf.float32)
+
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
     predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
@@ -145,7 +150,7 @@ def bottleneck(x, filters, kernel_size=(3, 3), padding="same", strides=1):
 	
 def UNet():
 	f = [16, 32, 64, 128, 256]
-	inputs = keras.layers.Input((image_size, image_size, 1))
+	inputs = keras.layers.Input((image_size, image_size, 3))
 	
 	p0 = inputs
 	c1, p1 = down_block(p0, f[0]) #128 -> 64
@@ -176,8 +181,8 @@ def TrainUnet():
 	epochs = 10
 	batch_size = 1
 	model = UNet()
-	adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
-	model.compile(optimizer=adam, loss="binary_crossentropy", metrics=["acc",f1_metric])
+	#adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
+	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["acc",f1_metric])
 	model.summary()
 	
 	train_data,  test_data, real_data= PreProcessImages()
@@ -187,12 +192,12 @@ def TrainUnet():
 	#valid_steps = len(test_data.labels)//batch_size
 	#print (train_steps)
 	#model.fit_generator(train_dataset, validation_data=test_dataset, steps_per_epoch=train_steps, validation_steps=valid_steps, epochs=epochs)
-	if not os.path.exists("project.h5"):
+	if not os.path.exists("UNetW.h5"):
 		model_history = model.fit(train_data.images,train_data.labels, epochs=epochs)
 		loss = model_history.history['loss']
-		model.save_weights("project.h5")
+		model.save_weights("UNetW.h5")
 	else:
-		model.load_weights("project.h5")
+		model.load_weights("UNetW.h5")
 	
 	loss, accuracy, f1_score = model.evaluate(test_data.images,test_data.labels)
 	print(loss)
@@ -208,7 +213,7 @@ def TrainUnet():
 	for i in range (result.shape[0]):
 		img = result[i,:,:,:]
 		img = img.reshape(128,128)
-		img = img>0.5
+		img = img>0.4
 		img = img*255
 		img = img.astype(np.uint8)
 		cv2.imwrite("result_"+str(i)+".jpg",img)
