@@ -5,11 +5,11 @@ import numpy as np
 
 import skimage.io
 import cv2
-#import torchvision.transforms as transforms
-#from torch.utils.data import DataLoader
-#from torch.autograd import Variable
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+from torch.autograd import Variable
 from PIL import Image
-#import torch
+import torch
 
 import tensorflow as tf
 from tensorflow import keras
@@ -17,9 +17,9 @@ from IPython.display import clear_output
 import matplotlib.pyplot as plt
 
 
-#from models import Generator
-#from models import Discriminator
-#from utils import ReplayBuffer
+from models import Generator
+from models import Discriminator
+from utils import ReplayBuffer
 from utils import LambdaLR
 from utils import Logger
 from utils import weights_init_normal
@@ -106,18 +106,18 @@ def PreProcessImages():
 	return train_data,  test_data, real_data
 
 def f1_metric(y_true, y_pred):
-    y_true = y_true >0.4
-    y_pred = y_pred>0.4
-    y_true = tf.dtypes.cast(y_true,tf.float32)
-    y_pred = tf.dtypes.cast(y_pred,tf.float32)
+	y_true = y_true >0.4
+	y_pred = y_pred>0.4
+	y_true = tf.dtypes.cast(y_true,tf.float32)
+	y_pred = tf.dtypes.cast(y_pred,tf.float32)
 
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-    precision = true_positives / (predicted_positives + K.epsilon())
-    recall = true_positives / (possible_positives + K.epsilon())
-    f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
-    return f1_val
+	true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+	possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+	predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+	precision = true_positives / (predicted_positives + K.epsilon())
+	recall = true_positives / (possible_positives + K.epsilon())
+	f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
+	return f1_val
 
 	
 def ImportImages(train_data,  test_data):
@@ -173,7 +173,7 @@ def UNet():
 #https://github.com/vincent1bt/MedCycleGAN/blob/master/MedCycleGAN.ipynb	
 def Discriminator():
 	input = keras.layers.Input((image_size, image_size, 1), name='image')
-        
+		
 	model = keras.layers.Conv2D(64, 3, strides=2, padding="same")(input)
 	model = keras.layers.BatchNormalization()(model)
 	model = keras.layers.LeakyReLU()(model)
@@ -189,15 +189,24 @@ class DisplayCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		clear_output(wait=True)
 		#show_predictions()
-		print ('\nSample Prediction after epoch {}\n'.format(epoch+1))
-	
+		print ('\nSample Prediction after epoch {}\n'.format(epoch+1))\
+
+def dice_coef(y_true, y_pred, smooth=1):
+	y_true = y_true >0.4
+	y_pred = y_pred>0.4
+	y_true = tf.dtypes.cast(y_true,tf.float32)
+	y_pred = tf.dtypes.cast(y_pred,tf.float32)
+
+	intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+	return(2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
+
 def TrainUnet():
 #############################Start Unet training###############################
 	epochs = 10
 	batch_size = 1
 	model = UNet()
 	#adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
-	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["acc",f1_metric])
+	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=[f1_metric,dice_coef])
 	model.summary()
 	
 	train_data,  test_data, real_data= PreProcessImages()
@@ -208,36 +217,75 @@ def TrainUnet():
 	#print (train_steps)
 	#model.fit_generator(train_dataset, validation_data=test_dataset, steps_per_epoch=train_steps, validation_steps=valid_steps, epochs=epochs)
 	if not os.path.exists("UNetW.h5"):
-		model_history = model.fit(train_data.images,train_data.labels, epochs=epochs)
+		model_history = model.fit(train_data.images,train_data.labels,validation_split=0.3, epochs=epochs)
 		loss = model_history.history['loss']
+		val_loss = model_history.history['val_loss']
 		model.save_weights("UNetW.h5")
 	else:
 		model.load_weights("UNetW.h5")
 	
-	loss, accuracy, f1_score = model.evaluate(test_data.images,test_data.labels)
-	print(loss)
-	print(accuracy)
-	print(f1_score)
-	print("###################################")
-	loss, accuracy, f1_score = model.evaluate(real_data.images,real_data.labels)
-	print(loss)
-	print(accuracy)
-	print(f1_score)
-	result = model.predict(real_data.images)
-	print(result.shape)
-	for i in range (result.shape[0]):
-		img = result[i,:,:,:]
-		img = img.reshape(128,128)
+	resultCross = model.predict(test_data.images)
+
+	resultSame = model.predict(real_data.images)
+
+
+	resultCross = resultCross > 0.4
+
+	resultSame = resultSame >0.4
+
+	score = model.evaluate(test_data.images,test_data.labels)
+
+	print("Cross Domain Loss: "+str(score[0]))
+
+	print("Cross Domain Accuracy: "+str(score[1]))
+
+	print("Cross Domain F1 score: "+str(score[2]))
+
+	score = model.evaluate(real_data.images,real_data.labels)
+
+	print("Real Domain Loss: "+str(score[0]))
+
+	print("Real Domain Accuracy: "+str(score[1]))
+
+	print("Real Domain F1 score: "+str(score[2]))
+
+	for i in range (resultSame.shape[0]):
+		img = resultSame[i]
 		img = img>0.4
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("result_"+str(i)+".jpg",img)
-'''
+		cv2.imwrite("SamePredicted_"+str(i)+".jpg",img)
+		img = real_data.labels[i]
+
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("SameGround_"+str(i)+".jpg",img)
+		img = real_data.images[i]
+
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("SameImage_"+str(i)+".jpg",img)
+		img = resultCross[i]
+
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("CrossPredicted_"+str(i)+".jpg",img)
+		img = test_data.labels[i]
+
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("CrossGround_"+str(i)+".jpg",img)
+		img = test_data.images[i]
+
+		img = img*255
+		img = img.astype(np.uint8)
+		cv2.imwrite("CrossImage_"+str(i)+".jpg",img)
+
+	return model
+
 	epochs = range(epochs)
 
 	plt.figure()
-	result = model.	result = model.predict(test_data.images)
-(test_data.images)
 	plt.plot(epochs, loss, 'r', label='Training loss')
 	plt.plot(epochs, val_loss, 'bo', label='Validation loss')
 	plt.title('Training and Validation Loss')
@@ -246,7 +294,8 @@ def TrainUnet():
 	plt.ylim([0, 1])
 	plt.legend()
 	plt.show()
-	'''
+	
+	
 
 def TrainGAN():
 #############################Start GAN training########################################
@@ -402,9 +451,6 @@ def TrainGAN():
 	torch.save(netD_A.state_dict(), 'output/netD_A.pth')
 	torch.save(netD_B.state_dict(), 'output/netD_B.pth')
 
-#<<<<<<< HEAD
-	
-
 
 # Generators and Discriminators 
 generator_1 = UNet()
@@ -456,72 +502,72 @@ discriminator_y_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 # Training 
 # Generating an image
 def generate_images(model, test_input):
-  prediction = model(test_input)
-    
-  plt.figure(figsize=(12, 12))
+	prediction = model(test_input)
+	
+	plt.figure(figsize=(12, 12))
 
-  display_list = [test_input[0], prediction[0]]
-  title = ['Real Image', 'Generated Image']
+	display_list = [test_input[0], prediction[0]]
+	title = ['Real Image', 'Generated Image']
 
-  for i in range(2):
-    plt.subplot(1, 2, i + 1)
-    plt.title(title[i])
-    plt.imshow(np.squeeze(display_list[i]) * 0.5 + 0.5, cmap='gray')
-    plt.axis('off')
-  plt.show()
+	for i in range(2):
+		plt.subplot(1,2,i+1)
+		plt.title(title[i])
+		plt.imshow(np.squeeze(display_list[i]) * 0.5 + 0.5, cmap='gray')
+		plt.axis('off')
+		plt.show()
 
 #Steps of Training
 @tf.function
 def train_step(real_image_x, real_image_y):
-  with tf.GradientTape(persistent=True) as tape: 
-    #generator_g transforms from X to Y
-    #generator_f transforms from Y to X
+	with tf.GradientTape(persistent=True) as tape: 
+	#generator_g transforms from X to Y
+	#generator_f transforms from Y to X
 
-    #From X, generate Y
-    generated_image_y = generator_g(real_image_x, training=True)
-    #From generated Y, back to X
-    cycled_image_x = generator_f(generated_image_y, training=True)
+	#From X, generate Y
+		generated_image_y = generator_g(real_image_x, training=True)
+	#From generated Y, back to X
+		cycled_image_x = generator_f(generated_image_y, training=True)
 
-    #From Y, generate X
-    generated_image_x = generator_f(real_image_y, training=True)
-    #From generated X, back to Y
-    cycled_image_y = generator_g(generated_image_x, training=True)
+	#From Y, generate X
+		generated_image_x = generator_f(real_image_y, training=True)
+	#From generated X, back to Y
+		cycled_image_y = generator_g(generated_image_x, training=True)
 
-    same_image_x = generator_f(real_image_x, training=True)
-    same_image_y = generator_g(real_image_y, training=True)
+		same_image_x = generator_f(real_image_x, training=True)
+		same_image_y = generator_g(real_image_y, training=True)
 
-    #Should output 1's since are real images
-    patch_real_x = discriminator_x(real_image_x, training=True)
-    patch_real_y = discriminator_y(real_image_y, training=True)
+	#Should output 1's since are real images
+		patch_real_x = discriminator_x(real_image_x, training=True)
+		patch_real_y = discriminator_y(real_image_y, training=True)
 
-    #Should output 0's since are generated images
-    patch_generated_x = discriminator_x(generated_image_x, training=True)
-    patch_generated_y = discriminator_y(generated_image_y, training=True)
+	#Should output 0's since are generated images
+		patch_generated_x = discriminator_x(generated_image_x, training=True)
+		patch_generated_y = discriminator_y(generated_image_y, training=True)
 
-    generator_g_loss = generator_loss(patch_generated_y)
-    generator_f_loss = generator_loss(patch_generated_x)
-    
-    total_cycle_loss = cycle_loss(real_image_x, cycled_image_x) + cycle_loss(real_image_y, cycled_image_y)
-    
-    total_generator_g_loss = generator_g_loss + total_cycle_loss + identity_loss(real_image_y, same_image_y)
-    total_generator_f_loss = generator_f_loss + total_cycle_loss + identity_loss(real_image_x, same_image_x)
+		generator_g_loss = generator_loss(patch_generated_y)
+		generator_f_loss = generator_loss(patch_generated_x)
+	
+		total_cycle_loss = cycle_loss(real_image_x, cycled_image_x) + cycle_loss(real_image_y, cycled_image_y)
+	
+		total_generator_g_loss = generator_g_loss + total_cycle_loss + identity_loss(real_image_y, same_image_y)
+		total_generator_f_loss = generator_f_loss + total_cycle_loss + identity_loss(real_image_x, same_image_x)
 
-    discriminator_x_loss = discriminator_loss(patch_real_x, patch_generated_x)
-    discriminator_y_loss = discriminator_loss(patch_real_y, patch_generated_y)
-  
-  generator_g_gradients = tape.gradient(total_generator_g_loss, generator_g.trainable_variables)
-  generator_f_gradients = tape.gradient(total_generator_f_loss, generator_f.trainable_variables)
-  
-  discriminator_x_gradients = tape.gradient(discriminator_x_loss, discriminator_x.trainable_variables)
-  discriminator_y_gradients = tape.gradient(discriminator_y_loss, discriminator_y.trainable_variables)
-  
-  generator_g_optimizer.apply_gradients(zip(generator_g_gradients, generator_g.trainable_variables))
+		discriminator_x_loss = discriminator_loss(patch_real_x, patch_generated_x)
+		discriminator_y_loss = discriminator_loss(patch_real_y, patch_generated_y)
 
-  generator_f_optimizer.apply_gradients(zip(generator_f_gradients, generator_f.trainable_variables))
-  
-  discriminator_x_optimizer.apply_gradients(zip(discriminator_x_gradients, discriminator_x.trainable_variables))
-  
-  discriminator_y_optimizer.apply_gradients(zip(discriminator_y_gradients, discriminator_y.trainable_variables))
+		generator_g_gradients = tape.gradient(total_generator_g_loss, generator_g.trainable_variables)
+		generator_f_gradients = tape.gradient(total_generator_f_loss, generator_f.trainable_variables)
+
+		discriminator_x_gradients = tape.gradient(discriminator_x_loss, discriminator_x.trainable_variables)
+		discriminator_y_gradients = tape.gradient(discriminator_y_loss, discriminator_y.trainable_variables)
+
+		generator_g_optimizer.apply_gradients(zip(generator_g_gradients, generator_g.trainable_variables))
+
+		generator_f_optimizer.apply_gradients(zip(generator_f_gradients, generator_f.trainable_variables))
+
+		discriminator_x_optimizer.apply_gradients(zip(discriminator_x_gradients, discriminator_x.trainable_variables))
+
+		discriminator_y_optimizer.apply_gradients(zip(discriminator_y_gradients, discriminator_y.trainable_variables))
 
 # Training of the U-Net Cycle GAN
 def Train(epochs):
@@ -531,7 +577,7 @@ def Train(epochs):
 		n = 0
 		for image_x, image_y in PreProcessImages():
 			train_step(image_x, image_y)
-      
+	  
 			if n % 10 == 0:
 				print ('.', end='')
 			n+=1
@@ -545,10 +591,8 @@ def Train(epochs):
 
 	checkpoint.save(file_prefix=checkpoint_prefix)
 		
-#=======
-#>>>>>>> 059dc7b86aa2972f1dbfd38652b47cdb1ce09405
 def main():
-	TrainUnet()
+	model = TrainUnet()
 
 if __name__ == '__main__':
 	main()
