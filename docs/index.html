@@ -45,14 +45,15 @@
 					<li class="nav-item ">
 					<a class="nav-link" href="#Procedure">Procedure</a>
 					</li>				
-					<li class="nav-item ">
-						<a class="nav-link" href="#References">References </a>						
-					</li>	
+						
 					<li class="nav-item">
 						<a class = "nav-link" href="#Analysis">Analysis </a>
 					</li>
 					<li class="nav-item">
 						<a class = "nav-link" href="#Analysis">Results </a>
+					</li>
+					<li class="nav-item ">
+						<a class="nav-link" href="#References">References </a>						
 					</li>
 				</ul>
 			</div>
@@ -73,11 +74,43 @@
 <div class ="container">
 	<h2 class ="page-header"> 1. Introduction </h2>	
 	<p class ="lead">
-		Unet, is a powerful method for medical image segmentation. To date Unet has demonstrated state-of-art performance in many complex medical image segmentation tasks, especially under the condition when the training and testing data share the same distribution (i.e. come from the same source domain). However, in clinical practice, medical images are acquired from different domains/vendors and centers. The performance of a U-Net trained from a particular source domain, when transferred to a different target domain (e.g. different vendor, acquisition parameter), can drop unexpectedly. Collecting a large amount of annotation from each new domain to retrain the U-Net is expensive, tedious, and practically impossible.<sup>1</sup> Our project aims to conduct the following experiments<br>
-		<ul class="list-unstyled">
-			<li>(1) Address the domain shift problem in Unets by analyzing and comparing the performance of Unets over different domains/vendors<li>
-			<li>(2) Design an unpaired generative adversarial network (GAN) for vendor-adaptation, and then perform segmentation. We have used Prostate central gland and peripheral zone images as our dataset in our experiments where two different modalities( T2, ADC) served as different domains, the methodology can be extended to medical images segmentation in general.<li>
-		</ul>
+		Unet, is a powerful method for medical image segmentation. To date Unet has
+		demonstrated state-of-art performance in many complex medical image
+		segmentation tasks, especially under the condition when the training and testing
+		data share the same distribution (i.e. come from the same source domain).
+		However, in clinical practice, medical images are acquired from different
+		domains/vendors and centers. The performance of a U-Net trained from a particular source
+		domain, when transferred to a different target domain (e.g. different vendor,
+		acquisition parameter), can drop unexpectedly. Collecting a large amount of
+		annotation from each new domain to retrain the U-Net is expensive, tedious, and
+		practically impossible.The paper proposes a Unet-CycleGan architecture to solve this domain shift problem.<sup>1</sup>
+
+<h3> <p><font size="4" style ="color:#FF3399" >UNet Architecture<sup>1</sup></font></p> </h3>
+<img src = "images/u-net-architecture.png" width = 50%, class="mx-auto d-block">
+
+<p><h4> <p><font size="4" style ="color:#FF3399">The domain shift problem of UNet<sup>1</sup></font></p> </h4><br>
+<img src = "images/Domain_shift.png" width = 75% class="mx-auto d-block"><br>
+Two examples to show that the trained Unet are vulnerable to the carefully calculated
+perturbation added to the original image. The perturbation hardly affects human vision, but leads
+to failure of the Unet: in the first example, the segmentation went wrong; in the second example,
+the segmentation completely failed.</p>
+
+<h5> <p><font size="4" style ="color:#FF3399" >UNet-GAN Architecture<sup>1</sup></font></p> </h5>
+<img src = "images/a-The-detailed-design-of-the-LV-Unet-in-Unet-GAN-and-b-the-basic-CycleGAN.png" width = 75%, class="mx-auto d-block">
+
+<h4> <p><font size="4" style ="color:#FF3399">Summarization of Paper Results<sup>1</sup></font></p> </h4>
+<img src = "images/Paper_results.png" width = 75% class="mx-auto d-block"><br>
+<p>In the paper, the performance of Left Ventricle segmentation is evaluated in terms
+of Dice overlap index between the ground truth and the segmentation results. Three scenarios are compared:
+Clean Unet(train/test data from same domain), Noisy Unet(train/test data from different domains) and Unet-GAN.</p>
+
+<h5> <p><font size="4" style ="color:#FF3399">Pathwork</font></p> </h5>
+
+Our project aims to conduct the following experiments<br>
+(1) Address the domain shift problem in Unets by analyzing and comparing the performance of Unets over different domains/vendors<br>
+(2) Design an unpaired generative adversarial network (GAN) for vendor-
+adaptation, and then perform segmentation. We have used Prostate central gland and peripheral zone images as our dataset in our experiments where two different modalities( T2, ADC) served as different domains, the methodology can be
+extended to medical images segmentation in general.
 	</p>
 	
 </div>
@@ -85,158 +118,109 @@
 <div class ="container">
 	<h2 class ="page-header" id="Procedure"> 2. Procedure</h2>	
 	<p class ="lead">
-	<h4>2.1 Data</h4>
+	<p> <p><font size="5">2.1 Data</font></p>
         <p>
 			The experiments involved, <a href="http://medicaldecathlon.com/?fbclid=IwAR0gog0WcOQ8HrUnCWzt8fO52CaX_Dp9DsQg1MQQpSxr0GDU7-KoYSM3mUc#tasks">Prostate central gland and peripheral zone images dataset</a>.
 			Since the dataset is multimodal, the two different MR modalities namely T2 and ADC were used as training/source and testing/target domains respectively.
-			Our dataset can be summarized as follows:
-			<ul class="list-unstyled">
-			<li>Size: 48 4D volumes (32 Training + 16 Testing)</li>
-			<li>Source: Radboud University, Nijmegen Medical Centre</li>
-			<li>Challenge: Segmenting two adjoint regions with large inter-subject variations<li>
-			</ul>
+			Our dataset can be summarized as follows:<br>
+			Size: 48 4D volumes (32 Training + 16 Testing)<br>
+			Source: Radboud University, Nijmegen Medical Centre<br><br>
+			<img src = "images/Data_example.png" width = 100% class="mx-auto d-block">
+
 			<p><font size="4" color = "black" >NOTE:</font></p> The datset used in the original paper(i.e the paper we are replicating<sup>1</sup>), <a href="https://www.cardiacatlas.org/studies/scmr-consensus-data/?fbclid=IwAR1anj_6njiVcg1ijPxN13nhG9jtVDJJgbOCdX3SXhCuY4sWcqPTATKnz-w">
 				SCMR Consensus Contour Data</a> was different and had medical data privacy issues. Due to lack of authorization necessary to handle such kind of data we decided to go with this one.
 		</p>
-	<h4>2.2 Methods</h4>
-		<p><font size="4" color = "blue" >2.2.1 Unet</font></p>
+		<p><font size="5">2.2 Methods</font></p>
+			<p><font size="4" style ="color:#FF3399" >2.2.1 Unet</font></p>
 			<p>
-			We used adaptive moment estimation (Adam) optimization with learning
-			rate of..... and a mini-batch size of..... The number of epochs was set T
+			Our architecture has 4 downblocks, 4 upblocks and a bottleneck.
+			Each downblock consists of 2 convolution layers with stride 1 and RELU activation, followed by Maxpool.
+			Similarly, the Upblock consists of upsampling followed by 2 convolution layers.
+			The bottleneck has 2 convolution layers.
+            We trained the model using Binary Cross Entropy as our Loss Function. We used adaptive moment estimation (Adam) optimization with learning
+			rate of 0.001. Our source and target domains are T2 and ADC respectively. The number of epoches are 20 and we evaluate our results in terms of 2 metrics, namely f1 and Dice Coefficient. 
 			</p>
 
-			<p><font size="4" color = "blue">2.2.2 GAN</font></p>
+			<p><font size="4" style ="color:#FF3399">2.2.2 GAN</font></p>
 			<p>
-			We used adaptive moment estimation (Adam) optimization with learning
-			rate of..... and a mini-batch size of..... The number of epochs was set To
+            We tried to run the cyclic GAN model according to the implementation with source domain as T2 and target domain ADC. But we faced hardware constraints, as in using our own hardware the estimated training time was 26 days. 
 			</p>
 
-			<p><font size="4" color = "blue">2.2.3 Experiments</font></p>
+			<p><font size="4" style ="color:#FF3399">2.2.3 Experiments</font></p>
 			<p>
-			We performed comparative experiments to evaluate the performance in three scenarios:
-			<ul class="list-unstyled">
-				<li>1) Segment data of the target domain directly by Unet trained on the source domain </li>
-				<li> 2) Segment data of the source domain by Unet trained on the source domain</li>
-			3) 
-			<ul class="list-unstyled">				
+			We performed comparative experiments to evaluate the performance of:<br>
+			1) Unet trained on the source domain(T2) domain and tested on source domain<br>
+			2) Unet trained on the source domain(T2) domain and tested on target domain(ADC)<br>
+			
 			</p>
 			<p><font size="5">2.3 Tools</font></p>
-			<div class="row">
-			<div class="col">
-			<div class="card text-white bg-info "> 
-			<div class="card-header">
-			<p class="card-title">Software Tools & Libraries</p>
-			</div>
+			<p><font size="4" style ="color:#FF3399" >Software Tools & Libraries:</font></p>
 			<ul class="list-unstyled">
-				<li>Python</li>
-				<li>Tensorflow</li>
-				<li></li>
+			<li>TensorFLow </li>
+			<li>Keras</li>
+			<li> OpenCV</li>
 			</ul>
-			</div>
-			</div>
-			<div class="col">
-			<div class="card text-white bg-info "> 
-			<div class="card-header">
-			 <p class="card-title">Hardware</p>
-			</div>
+			<p><font size="4" style ="color:#FF3399" >Hardware:</font></p>
 			<ul class="list-unstyled">
-				<li>Nvidia GTX 1050</li>
-				<li></li>
-				<li></li>
-				<li></li>
-				<li></li>
-				<li></li>
-				<li></li>
+			<li>GPU:GeForce GTX 1050</li>
+			<li>Memory:2GB</li>
+			<li>Clock Rate:1.493 GHz</li>
 			</ul>
-			</div>
-			</div>
-			</div>
-			<p><font size="4" color = "blue" >Software Tools & Libraries</font></p>
-			<p><font size="4" color = "blue" >Hardware</font></p>
+	
 	</p>
 		
 </div>
 
-<div class ="container">
-			<h2 class ="page-header" id="Code"> 3. Code</h2>	
-			<p class ="lead"> <a href="unet-segmentation.html">View Our Code </a>
-			
-			</p>
-			
-</div>
 
 <div class ="container">
-		<h2 class ="page-header" id="References"> 4. References</h2>
-		<p>
-			<p><font size="4" color = "blue" >Original Paper used for replecation</font></p>
-			<p>1. Wenjun Yan and Yuanyuan Wang.:”The Domain Shift
-			Problem of Medical Image Segmentation and Vendor-Adaptation by Unet-GAN.”arXiv:1910.13681v1.<br>
-			<img src = "images/Main_paper.png" width = 40% style="border:3px solid black"></p>
-			<p><font size="4" color = "blue" >For understanding Unet</font></p>
-			<p>2. Olaf Ronneberger, Philipp Fischer, and Thomas Brox.:”U-Net: Convolutional Net-
-				works for Biomedical Image Segmentation.” arXiv:1505.04597v1.<br>
-			<img src = "images/Unet.png" width = 40% style="border:3px solid black"></p>
-			<p><font size="4" color = "blue" >For understanding Cycle-GAN</font></p>
-			<p>3. Jun-Yan Zhu and Taesung Park.:”Unpaired Image-to-Image Translation using
-				Cycle-Consistent Adversarial Networks.” arXiv:1703.10593.<br>
-			<img src = "images/GAN.png" width = 40% style="border:3px solid black"></p>
-			<p><font size="4" color = "blue" >Additional Code References used for Implementation</font></p>
-			<p>Jun-Yan Zhu and Taesung Park.:”Unpaired Image-to-Image Translation using
-				Cycle-Consistent Adversarial Networks.” arXiv:1703.10593.</p>
-		</p>	
-		<p class ="lead">
-			
-		
-		</p>
-		
-</div>
-
-<div class ="container">
-	<h2 class ="page-header" id="Analysis"> 5. Analysis</h2>	
+	<h2 class ="page-header" id="Analysis"> 3. Analysis</h2>	
 	<p class ="lead">
-	</p> <p><font size="5">5.1 Observations</font></p>
-		<p>
-			The experiments involved short-axis steady-state free precession (SSFP) cine MR
-			images of 144 subjects acquired by three major MRI machines as three domains (44
-			Philips samples, 50 GE samples, 50 Siemens samples). Image size varied from 256×256
-			to 512×512 pixels. All images were rescaled to the same in-plane resolution of 1.5×1.5
-			mm. Cine MR and label images were cropped at the center to a size of 192×192 for
-			faster training and testing.
-			Ground truth annotation of the LV myocardium and blood pool were performed on
-			the cine MR images by experienced radiologists. The number of available annotated
-			images in each domain was 4823, 2084, and 2602 for Philips, GE, and Siemens,
-			respectively. Philips data was set as the source domain to train the LV-Unet. We
-			randomly selected 35 subjects out of 44 for training (3920 images) and the rest 9 for
-			testing (903 images). Siemens and GE were defined as the two target domains. To train
-			the Unet-GAN, we separated every domain into training/testing set: 3008/1815 for
-			Philips, 1680/924 for Siemens, and 1320/764 for GE.
-		</p>
-		<p><font size="5">5.2 Results</font></p>
-			<p><font size="4" color = "blue" >5.2.1 Unet</font></p>
+
+		<p><font size="5">3.1 Results</font></p>
+
+			<p><font size="4"style ="color:#FF3399">3.1.1 Resulting Images</font></p>
 			<p>
-			We used adaptive moment estimation (Adam) optimization with learning
-			rate of..... and a mini-batch size of..... The number of epochs was set T
+				Following are some result images depicting the clear segmentation evaluations and comparisions between the 2 scenarios.
+			</p>
+
+			<img src = "images/Source16.png" class="mx-auto d-block">
+			<img src = "images/Target16.png" class="mx-auto d-block">
+			<img src = "images/Source17.png" class="mx-auto d-block">
+			<img src = "images/Target17.png" class="mx-auto d-block">
+			
+
+			<p><font size="4"style ="color:#FF3399" >3.1.2 Loss and Evaluation Metrics</font></p>
+			<p>
+			
+			<style>
+			{
+  				box-sizing: border-box;
+			}
+
+			.column {
+  			float: left;
+  			width: 50%;
+  			padding: 5px;
+			}
+			.row::after {
+  			content: "";
+  			clear: both;
+  			display: table;
+			}
+			</style>
+
+			<div class="row">
+  				<div class="column">
+					<img src = "images/Training_Validation_epoch20.png" style="width:100%" class="mx-auto d-block">
+  				</div>
+  				<div class="column">
+					<img src = "images/Metrics_epoch20.png" style="width:100%" class="mx-auto d-block">
+  				</div>
+			</div>
+
 			</p>
 	
-			<p><font size="4" color = "blue">5.2.2 GAN</font></p>
-			<p>
-			We used adaptive moment estimation (Adam) optimization with learning
-			rate of..... and a mini-batch size of..... The number of epochs was set To
-			</p>
-
-			<p><font size="4" color = "blue">5.2.3 Experiments</font></p>
-			<p>
-			We performed comparative experiments to evaluate the performance in three scenarios:<br>
-			1) Segment data of the target domain directly by Unet trained on the clean source
-			domain (i.e. original data)<br>
-			2) Segment data of the target domain by Unet trained on different domain<br>
-			3) First translate data of the target domain by Unet-GAN to the source domain, then
-			segment the translated data by the LV-Unet trained on the clear source data.
-			The polluted Unet meant to evaluate how much systematic augmentation can address
-			the domain shift problem, in comparison to the proposed Unet-GAN. The performance
-			of LV segmentation was evaluated in terms of Dice overlap index between the ground
-			truth and the segmentation results.<br>				
-			</p>
+			<p><font size="4"style ="color:#FF3399">3.1.3 Summarization</font></p>	
 
 <style>
 table, th, td {
@@ -253,34 +237,63 @@ table#t01 {
 }
 </style>
 
-<table table id="t01">
+<table table id="t01" >
   <tr>
 	<th>Scenarios</th>  
 	<th>Dice Index</th>
     <th>F1 Metric</th> 
-    <th>Accuracy</th>  
   </tr>
   <tr>
     <td>Source Domain Train/Test</td>
-    <td>0</td>
-	<td>0</td>
-	<td>0</td>
+    <td>0.8429</td>
+	<td>0.9739</td>
   </tr>
   <tr>
 	<td>Source Domain Train/Target Domain Test</td>
-	<td>0</td>
-	<td>0</td>
-	<td>0</td>
+	<td>0.8105</td>
+	<td>0.9718</td>
   </tr>
 </table>
 <br>
 
-<img src = "images/a-The-detailed-design-of-the-LV-Unet-in-Unet-GAN-and-b-the-basic-CycleGAN.png">
-<img src = "images/Training_Validation_epoch20.png">
-<img src = "images/>
+</p>
+</p> <p><font size="5">3.2 Observations</font></p>
+<p>
+	We can summarize our observations as follows:
+	<li> We saw a drop in the performance when tested on target domain comapred to a source domain, but did not see a significant fall as mentioned in the originia paper</li>
+	<li> We found that f1 score is better metric comapred to Dice Coefficient in our case. One possible reason could be that our data is skewed.</li>
+	<li> To classify the segmented area the threshold value most commonly used is 0.5 but in our case 0.4 gave the best results</li>
+	<li> The validation loss started to increase beyond 50 epoches. One possible reasons could be the lack of training data</li>
+
 
 </p>
 			
+</div>
+
+
+<div class ="container">
+	<h2 class ="page-header" id="References"> 4. References</h2>
+	<p>
+		<p><font size="4"style ="color:#FF3399" >Original Paper used for replecation</font></p>
+		<p>[1] Wenjun Yan and Yuanyuan Wang.:<a href = "https://arxiv.org/abs/1910.13681">"The Domain Shift
+		Problem of Medical Image Segmentation and Vendor-Adaptation by Unet-GAN.”</a> arXiv:1910.13681v1.<br>
+		<img src = "images/Main_paper.png" width = 40% style="border:3px solid black" ></p>
+		<p><font size="4" style ="color:#FF3399" >For understanding Unet</font></p>
+		<p>[2] Olaf Ronneberger, Philipp Fischer, and Thomas Brox.:<a href = "https://arxiv.org/abs/1505.04597">”U-Net: Convolutional Net-
+			works for Biomedical Image Segmentation.”</a> arXiv:1505.04597v1.<br>
+		<img src = "images/Unet.png" width = 40% style="border:3px solid black" ></p>
+		<p><font size="4"style ="color:#FF3399" >For understanding Cycle-GAN</font></p>
+		<p>[3] Jun-Yan Zhu and Taesung Park.:<a href = "https://arxiv.org/abs/1703.10593">”Unpaired Image-to-Image Translation using
+			Cycle-Consistent Adversarial Networks.”</a> arXiv:1703.10593.<br>
+		<img src = "images/GAN.png" width = 40% style="border:3px solid black" ></p>
+		<p><font size="4" style ="color:#FF3399" >Additional Code References used for Implementation</font></p>
+		<p> <a href = "https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynbp>"> [4] https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb</a>
+	</p>	
+	<p class ="lead">
+		
+	
+	</p>
+	
 </div>
 
 <hr>

@@ -1,0 +1,3 @@
+if (self.CavalryLogger) { CavalryLogger.start_js(["Bs7js"]); }
+
+__d("RelayFBEnvironmentActorID",["invariant","relay-experimental/useRelayEnvironment"],(function(a,b,c,d,e,f,g){"use strict";__p&&__p();function h(a){a=a.options;a!=null&&a.actorID!=null||g(0,20185);typeof a.actorID==="string"||g(0,void 0);return a.actorID}function a(){var a=b("relay-experimental/useRelayEnvironment")();return h(a)}e.exports={getActorID:h,useActorID:a}}),null);

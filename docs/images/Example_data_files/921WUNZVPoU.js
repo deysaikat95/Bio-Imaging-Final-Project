@@ -1,0 +1,5 @@
+if (self.CavalryLogger) { CavalryLogger.start_js(["ss\/VN"]); }
+
+__d("XStoriesAsyncTrayController",["XController"],(function(a,b,c,d,e,f){e.exports=b("XController").create("/stories/tray/async/",{expanded:{type:"Bool",defaultValue:!1}})}),null);
+__d("FBStoriesTrayReloadXHPTray",["AsyncRequest","XStoriesAsyncTrayController"],(function(a,b,c,d,e,f){"use strict";a={reloadTray:function(a){a=b("XStoriesAsyncTrayController").getURIBuilder().setBool("expanded",(a=a)!=null?a:!1).getURI();new(b("AsyncRequest"))().setURI(a).setMethod("GET").setReadOnly(!0).send()}};e.exports=a}),null);
+__d("FBStoriesTrayAutoReload",["FBStoriesTrayReloadXHPTray"],(function(a,b,c,d,e,f){"use strict";__p&&__p();var g=null;a={setReloadTimer:function(a){a=a.earliestExpTimeInSec;if(a==null||a<0)return;a=a*1e3-Date.now()+10*1e3;window.clearTimeout(g);g=window.setTimeout(function(){b("FBStoriesTrayReloadXHPTray")&&b("FBStoriesTrayReloadXHPTray").reloadTray()},a)}};e.exports=a}),null);
