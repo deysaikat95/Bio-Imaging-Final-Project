@@ -49,9 +49,6 @@
 					<li class="nav-item">
 						<a class = "nav-link" href="#Analysis">Analysis </a>
 					</li>
-					<li class="nav-item">
-						<a class = "nav-link" href="#Analysis">Results </a>
-					</li>
 					<li class="nav-item ">
 						<a class="nav-link" href="#References">References </a>						
 					</li>
@@ -180,7 +177,7 @@ extended to medical images segmentation in general.
 
 			<p><font size="4"style ="color:#FF3399">3.1.1 Resulting Images</font></p>
 			<p>
-				Following are some result images depicting the clear segmentation evaluations and comparisions between the 2 scenarios.
+				Following are some result images depicting the clear segmentation evaluations and comparisions between the 2 scenarios. One can clearly observe that when domain is changed, the prediction performance degrades.
 			</p>
 
 			<img src = "images/Source16.png" class="mx-auto d-block">
@@ -240,16 +237,16 @@ table#t01 {
 <table table id="t01" >
   <tr>
 	<th>Scenarios</th>  
-	<th>Dice Index</th>
-    <th>F1 Metric</th> 
+	<th>F1 Metric</th>
+    <th>Dice Index</th> 
   </tr>
   <tr>
-    <td>Source Domain Train/Test</td>
+    <td>T2(Source) ---->  T2(Source)</td>
     <td>0.8429</td>
 	<td>0.9739</td>
   </tr>
   <tr>
-	<td>Source Domain Train/Target Domain Test</td>
+	<td>T2(Source) ---->  ADC(Target)</td>
 	<td>0.8105</td>
 	<td>0.9718</td>
   </tr>
@@ -260,10 +257,10 @@ table#t01 {
 </p> <p><font size="5">3.2 Observations</font></p>
 <p>
 	We can summarize our observations as follows:
-	<li> We saw a drop in the performance when tested on target domain comapred to a source domain, but did not see a significant fall as mentioned in the originia paper</li>
-	<li> We found that f1 score is better metric comapred to Dice Coefficient in our case. One possible reason could be that our data is skewed.</li>
-	<li> To classify the segmented area the threshold value most commonly used is 0.5 but in our case 0.4 gave the best results</li>
-	<li> The validation loss started to increase beyond 50 epoches. One possible reasons could be the lack of training data</li>
+	<li> We saw a drop in the performance when tested on target domain compared to a source domain, but did not see a significant fall as mentioned in the original paper.</li>
+	<li> We found that f1 score is a better metric compared to Dice Coefficient in our case. One possible reason could be that our data is skewed.</li>
+	<li> For labelling the segmented area, the threshold value most commonly used is 0.5 but in our case 0.4 gave the best results.</li>
+	<li> The validation loss started to increase beyond 50 epoches. One possible reason could be the lack of training data.</li>
 
 
 </p>
@@ -274,7 +271,7 @@ table#t01 {
 <div class ="container">
 	<h2 class ="page-header" id="References"> 4. References</h2>
 	<p>
-		<p><font size="4"style ="color:#FF3399" >Original Paper used for replecation</font></p>
+		<p><font size="4"style ="color:#FF3399" >Original Paper used for replication</font></p>
 		<p>[1] Wenjun Yan and Yuanyuan Wang.:<a href = "https://arxiv.org/abs/1910.13681">"The Domain Shift
 		Problem of Medical Image Segmentation and Vendor-Adaptation by Unet-GAN.”</a> arXiv:1910.13681v1.<br>
 		<img src = "images/Main_paper.png" width = 40% style="border:3px solid black" ></p>
@@ -287,7 +284,7 @@ table#t01 {
 			Cycle-Consistent Adversarial Networks.”</a> arXiv:1703.10593.<br>
 		<img src = "images/GAN.png" width = 40% style="border:3px solid black" ></p>
 		<p><font size="4" style ="color:#FF3399" >Additional Code References used for Implementation</font></p>
-		<p> <a href = "https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynbp>"> [4] https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb</a>
+		<p> <a href = "https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb"> [4] https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb</a>
 	</p>	
 	<p class ="lead">
 		
