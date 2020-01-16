@@ -1,57 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 11 08:48:10 2019
+@author: Cody, Sonal and Saikat
+"""
+
+# For timestamp
 import os
 import random
 import time
-import numpy as np
 
+#Image related library
+import numpy as np
 import skimage.io
 import cv2
 from PIL import Image
 
+# Tensorflow library 
 import tensorflow as tf
 from tensorflow import keras
-from IPython.display import clear_output
 import matplotlib.pyplot as plt
 
+# These library used for reading file and folder
 from os.path import isfile,join
 from os import listdir
 from keras import backend as K
 
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
+IMG_MAX_VAL = 255.
+IMG_THRESHOLD = 40
 # Updated to work  with tensorflow 2.0
-class GetData():
-	def __init__(self, data_dir):	
-		images_list =[]		
-		labels_list = []		
-		self.source_list = []
+
+# Data class, all the functionality like fetching data 
+# and data preprocessing done inside the class
+class Data():
+	def __init__(self, data_dir):
+		images_list =[]
+		labels_list = []
+		# Get Image and label folder path
 		label_dir = os.path.join(data_dir, "Labels")
 		image_dir = os.path.join(data_dir, "Images")
 		self.image_size = 128
 		examples = 0
-		print("loading images")
+		print("Loading images.....")
+		# Get the file name of image and label
 		onlyImagefiles = [f for f in listdir(image_dir) if isfile(join(image_dir, f))]
 		onlyLabelfiles = [f for f in listdir(label_dir) if isfile(join(label_dir, f))]
+		#Sort them so that it can be used for mapping later on.
 		onlyImagefiles.sort()
 		onlyLabelfiles.sort()
-
+		# Since number of images and label are same, use the number of images to iterate
 		for i in range (len(onlyImagefiles)):
+			#Concatenate the folder and file firectory to get the full directory path
 			image = cv2.imread(os.path.join(image_dir,onlyImagefiles[i]))
-			#im = Image.open(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
-			#label = np.array(im)
 			label = cv2.imread(os.path.join(label_dir,onlyLabelfiles[i]),cv2.IMREAD_GRAYSCALE)
 			#image= cv2.resize(image, (self.image_size, self.image_size))
 			#label= cv2.resize(label, (self.image_size, self.image_size))
+			
+			# Hack alert: This is a hardcoded number, purpose of this number is to only fetch
+			# region of interest in the image. 
 			image = image[96:224,96:224,:]
 			label = label[96:224,96:224]
-			#cv2.imwrite("Pre_"+str(i)+".jpg",label)
-			#image = image[...,0][...,None]/255
-			label = label>40
-			image = image/255
-			#image = image[...,None]
+			
+			# Preprocessing of the image
+			# Label is true for the region greater than threshold
+			label = label>IMG_THRESHOLD
+
+			#Regularize the image between 0-1
+			image = image/IMG_MAX_VAL
+			#Remove the extra dimension and change the type to int
 			label = label[...,None]
 			label = label.astype(np.int32)
-			#label = label*255
-			#cv2.imwrite("Post_"+str(i)+".jpg",label)
+
 			images_list.append(image)
 			labels_list.append(label)
 			examples = examples +1
@@ -61,18 +81,6 @@ class GetData():
 		print("Number of examples found: ", examples)
 		self.images = np.array(images_list)
 		self.labels = np.array(labels_list)
-
-	def next_batch(self, batch_size):
-	
-		if len(self.source_list) < batch_size:
-			new_source = list(range(self.examples))
-			random.shuffle(new_source)
-			self.source_list.extend(new_source)
-
-		examples_idx = self.source_list[:batch_size]
-		del self.source_list[:batch_size]
-
-		return self.images[examples_idx,...], self.labels[examples_idx,...]
 
 
 # Base Directory Directory 
@@ -88,9 +96,9 @@ BUFFER_SIZE = 1000
 image_size = 128
 EPOCHS = 20
 def PreProcessImages():
-	train_data = GetData(train_dir)
-	test_data = GetData(test_dir)
-	real_data = GetData(real_dir)
+	train_data = Data(train_dir)
+	test_data = Data(test_dir)
+	real_data = Data(real_dir)
 
 	return train_data,  test_data, real_data
 
