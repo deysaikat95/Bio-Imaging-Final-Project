@@ -27,8 +27,8 @@ from keras import backend as K
 
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-IMG_MAX_VAL = 255.
-IMG_THRESHOLD = 40
+IMG_MAX_VAL = 255
+IMG_THRESHOLD = 0.4
 # Updated to work  with tensorflow 2.0
 
 # Data class, all the functionality like fetching data 
@@ -64,7 +64,7 @@ class Data():
 			
 			# Preprocessing of the image
 			# Label is true for the region greater than threshold
-			label = label>IMG_THRESHOLD
+			label = label>IMG_THRESHOLD*100
 
 			#Regularize the image between 0-1
 			image = image/IMG_MAX_VAL
@@ -86,15 +86,16 @@ class Data():
 # Base Directory Directory 
 base_dir= 'Data'
 
-# Training and Test Directories 
+# Training on first domain
 train_dir = os.path.join(base_dir,'Train')
+# Testing on second domain
 test_dir = os.path.join(base_dir,'Test')
+# Testing on first domain
 real_dir = os.path.join(base_dir,'Real')
 
-BATCH_SIZE = 1
-BUFFER_SIZE = 1000
 image_size = 128
-EPOCHS = 20
+
+# Fetch and process the image
 def PreProcessImages():
 	train_data = Data(train_dir)
 	test_data = Data(test_dir)
@@ -102,9 +103,10 @@ def PreProcessImages():
 
 	return train_data,  test_data, real_data
 
+# Used f1 metric formula to calculate
 def f1_metric(y_true, y_pred):
-	y_true = y_true >0.4
-	y_pred = y_pred>0.4
+	y_true = y_true >IMG_THRESHOLD
+	y_pred = y_pred>IMG_THRESHOLD
 	y_true = tf.dtypes.cast(y_true,tf.float32)
 	y_pred = tf.dtypes.cast(y_pred,tf.float32)
 
@@ -115,14 +117,6 @@ def f1_metric(y_true, y_pred):
 	recall = true_positives / (possible_positives + K.epsilon())
 	f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
 	return f1_val
-
-	
-def ImportImages(train_data,  test_data):
-		 
-	train_dataset=tf.data.Dataset.from_tensor_slices((train_data.images, train_data.labels)).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-	test_dataset = tf.data.Dataset.from_tensor_slices((test_data.images, test_data.labels)).batch(BATCH_SIZE)
-	
-	return train_dataset, test_dataset
 
 
 def down_block(x, filters, kernel_size=(3, 3), padding="same", strides=1):
@@ -142,8 +136,6 @@ def bottleneck(x, filters, kernel_size=(3, 3), padding="same", strides=1):
 	c = keras.layers.Conv2D(filters, kernel_size, padding=padding, strides=strides, activation="relu")(x)
 	c = keras.layers.Conv2D(filters, kernel_size, padding=padding, strides=strides, activation="relu")(c)
 	return c
-	
-	
 	
 def UNet():
 	f = [16, 32, 64, 128, 256]
@@ -165,23 +157,7 @@ def UNet():
 	outputs = keras.layers.Conv2D(1, (1, 1), padding="same", activation="sigmoid")(u4)
 	model = keras.models.Model(inputs, outputs)
 	return model
-	
-	
-#https://github.com/vincent1bt/MedCycleGAN/blob/master/MedCycleGAN.ipynb	
-def Discriminator():
-	input = keras.layers.Input((image_size, image_size, 1), name='image')
-		
-	model = keras.layers.Conv2D(64, 3, strides=2, padding="same")(input)
-	model = keras.layers.BatchNormalization()(model)
-	model = keras.layers.LeakyReLU()(model)
-  
-	model = keras.layers.Conv2D(128, 3, strides=2, padding="same")(model)
-	model = keras.layers.BatchNormalization()(model)
-	model = keras.layers.LeakyReLU()(model)
 
-	model = keras.layers.Conv2D(1, 2, strides=1, activation='sigmoid', padding="valid")(model)
-	Model= keras.models.Model(input, model)
-	return Model
 class DisplayCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		clear_output(wait=True)
@@ -189,8 +165,8 @@ class DisplayCallback(tf.keras.callbacks.Callback):
 		print ('\nSample Prediction after epoch {}\n'.format(epoch+1))\
 
 def dice_coef(y_true, y_pred, smooth=1):
-	y_true = y_true >0.4
-	y_pred = y_pred>0.4
+	y_true = y_true >IMG_THRESHOLD
+	y_pred = y_pred>IMG_THRESHOLD
 	y_true = tf.dtypes.cast(y_true,tf.float32)
 	y_pred = tf.dtypes.cast(y_pred,tf.float32)
 
@@ -202,17 +178,11 @@ def TrainUnet():
 	epochs = 20
 	batch_size = 1
 	model = UNet()
-	#adam = keras.optimizers.Adam(learning_rate=0.00001, beta_1=0.9, beta_2=0.999, amsgrad=False)
 	model.compile(optimizer="adam", loss="binary_crossentropy", metrics=[f1_metric,dice_coef])
 	model.summary()
 	
 	train_data,  test_data, real_data= PreProcessImages()
-	#train_dataset, test_dataset= ImportImages(train_data,  test_data)
-	#print (train_data.images[0].shape)
-	#train_steps = len(train_data.labels)//batch_size
-	#valid_steps = len(test_data.labels)//batch_size
-	#print (train_steps)
-	#model.fit_generator(train_dataset, validation_data=test_dataset, steps_per_epoch=train_steps, validation_steps=valid_steps, epochs=epochs)
+	
 	if not os.path.exists("UNetW.h5"):
 		model_history = model.fit(train_data.images,train_data.labels,validation_split=0.3, epochs=epochs)
 		loss = model_history.history['loss']
@@ -223,61 +193,55 @@ def TrainUnet():
 		model.load_weights("UNetW.h5")
 	
 	resultCross = model.predict(test_data.images)
-
 	resultSame = model.predict(real_data.images)
 
 
-	resultCross = resultCross > 0.4
-
-	resultSame = resultSame >0.4
+	resultCross = resultCross >IMG_THRESHOLD
+	resultSame = resultSame >IMG_THRESHOLD
 
 	score = model.evaluate(test_data.images,test_data.labels)
 
 	print("Cross Domain Loss: "+str(score[0]))
-
 	print("Cross Domain F1 score: "+str(score[1]))
-
 	print("Cross Domain Dice Coef: "+str(score[2]))
 
 	score = model.evaluate(real_data.images,real_data.labels)
 
 	print("Real Domain Loss: "+str(score[0]))
-
 	print("Real Domain F1 score: "+str(score[1]))
-
 	print("Real Domain Dice Coef: "+str(score[2]))
 
 	for i in range (resultSame.shape[0]):
 		img = resultSame[i]
-		img = img>0.4
+		img = img>IMG_THRESHOLD
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("SamePredicted_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/SamePredicted_"+str(i)+".jpg",img)
 		img = real_data.labels[i]
 
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("SameGround_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/SameGround_"+str(i)+".jpg",img)
 		img = real_data.images[i]
 
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("SameImage_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/SameImage_"+str(i)+".jpg",img)
 		img = resultCross[i]
 
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("CrossPredicted_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/CrossPredicted_"+str(i)+".jpg",img)
 		img = test_data.labels[i]
 
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("CrossGround_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/CrossGround_"+str(i)+".jpg",img)
 		img = test_data.images[i]
 
 		img = img*255
 		img = img.astype(np.uint8)
-		cv2.imwrite("CrossImage_"+str(i)+".jpg",img)
+		cv2.imwrite("Results/Images/CrossImage_"+str(i)+".jpg",img)
 
 	
 
