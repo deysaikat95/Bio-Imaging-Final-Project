@@ -1,5 +1,5 @@
 # Bio Imaging Segmentation using UNet and GAN
-Advance ML Final project Fall 2019
+Advanced ML(CS5824) Final project Fall 2019
 
 
 - Tensorflow tutorial for U-Nets
@@ -10,3 +10,6 @@ https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/mas
 
 - Medical image unet
 https://github.com/raoakshayr/Medical-segmentation-UNET-tensorflow/blob/master/Unet_med2.ipynb
+
+- Website: 
+https://deysaikat95.github.io/Bio-Imaging-Final-Project/
