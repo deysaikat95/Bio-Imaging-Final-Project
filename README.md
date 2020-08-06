@@ -5,7 +5,7 @@ Advanced ML(CS5824) Final project Fall 2019
 - Tensorflow tutorial for U-Nets
 https://www.tensorflow.org/tutorials/images/segmentation
 
--UNET SEGMENTATION
+- UNET SEGMENTATION
 https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb
 
 - Medical image unet
